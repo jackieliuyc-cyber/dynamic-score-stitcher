@@ -1,10 +1,11 @@
-"""Public Bilibili video ingestion. No browser cookies or login credentials needed."""
+"""Local video ingestion using yt-dlp, without browser credentials or cached media."""
 import json
 import re
 import shutil
 import socket
 import ssl
 import subprocess
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -41,18 +42,6 @@ def describe_error(error):
     if isinstance(error, ValueError):
         return str(error)
     return "处理失败。请查看启动窗口中的错误详情后重试。"
-
-
-def request(url):
-    return urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=35)
-
-
-def api(path, params):
-    with request("https://api.bilibili.com" + path + "?" + urllib.parse.urlencode(params)) as r:
-        data = json.load(r)
-    if data.get("code") != 0:
-        raise ValueError("视频来源未能提供视频，请稍后重试或上传本地视频。")
-    return data["data"]
 
 
 def parse_link(link):
@@ -96,65 +85,82 @@ def parse_link(link):
     return match.group(1), page
 
 
+def downloader_error(error):
+    """Keep remote URLs and credentials out of UI messages."""
+    text = str(error)
+    match = re.search(r'(?:HTTP(?: Error)?[ :]+|server \()(\d{3})', text, re.I)
+    if match:
+        return describe_error(urllib.error.HTTPError('', int(match[1]), '', {}, None))
+    if 'timed out' in text.lower() or 'timeout' in text.lower():
+        return "连接视频来源超时，请检查网络后重试，或使用「本地视频」。"
+    return "yt-dlp 未能读取该视频，请尝试更新下载组件，或使用「本地视频」。"
+
+
 def download(link, folder, progress, check_cancel):
     bvid, part = parse_link(link)
+    try:
+        from yt_dlp import YoutubeDL
+        from yt_dlp.utils import DownloadError
+    except ImportError as exc:
+        raise ValueError("缺少视频下载组件，请重新运行启动脚本安装依赖。") from exc
+    canonical = f"https://www.bilibili.com/video/{bvid}/?p={part}"
+    check_cancel()
     progress(3, "读取视频信息")
-    info = api("/x/web-interface/view", {"bvid": bvid})
-    pages = info.get("pages", [])
-    if part > len(pages):
-        raise ValueError("视频没有指定的分段。")
-    page = pages[part - 1]
-    if page.get("duration", 0) > 1800:
-        raise ValueError("当前版本支持 30 分钟以内的视频。长视频请先裁剪后上传。")
-    play = api("/x/player/playurl", {
-        "bvid": bvid, "cid": page["cid"], "qn": 80,
-        "fnval": 0, "fnver": 0, "fourk": 1,
-    })
-    streams = play.get("durl", [])
-    if not streams:
-        raise ValueError("视频来源未返回可读取的画面，请使用「本地视频」导入文件。")
-    if len(streams) != 1:
-        raise ValueError("此视频返回多段媒体，请下载为一个完整视频后上传。")
-    stream = streams[0]
-    dest = folder / "source.mp4"
-    total = stream.get("size", 0)
-    if total > MAX_BYTES:
-        raise ValueError("视频超过 1 GB，请先裁剪或压缩。")
-    urls = [stream["url"]] + (stream.get("backup_url") or [])
-    error = None
-    for url in urls:
-        # Only use Bilibili's media CDN addresses returned by the public API.
-        host = urllib.parse.urlparse(url).hostname or ""
-        if not host.endswith((".bilivideo.com", ".bilivideo.cn", ".bilivideo.net", ".acgvideo.com")):
-            continue
+
+    class Logger:
+        def debug(self, message):
+            check_cancel()
+        info = warning = error = debug
+
+    def validate(info, *, incomplete=False):
+        check_cancel()
+        if info.get('is_live'):
+            raise ValueError("暂不支持直播，请选择已录制的视频。")
+        if (info.get('duration') or 0) > 1800:
+            raise ValueError("当前版本支持 30 分钟以内的视频。长视频请先裁剪后上传。")
+        if (info.get('filesize') or 0) > MAX_BYTES:
+            raise ValueError("视频超过 1 GB，请先裁剪或压缩。")
+
+    def hook(event):
+        check_cancel()
+        size = event.get('downloaded_bytes') or 0
+        total = event.get('total_bytes') or event.get('total_bytes_estimate') or 0
+        if size > MAX_BYTES:
+            raise ValueError("视频超过 1 GB，请先裁剪或压缩。")
+        if event.get('status') == 'downloading':
+            progress(min(90, 10 + int(size / max(total, size, 1) * 80)), "下载视频画面")
+
+    # Each attempt gets an empty workspace: no previous video or .part is reused.
+    with tempfile.TemporaryDirectory(prefix='.download-', dir=folder) as temp:
+        target = Path(temp) / 'source.mp4'
+        options = {
+            'format': 'bestvideo[ext=mp4][height<=1080]/best[ext=mp4][height<=1080]',
+            'outtmpl': str(target), 'noplaylist': True,
+            'cachedir': False, 'continuedl': False, 'overwrites': True,
+            'cookiefile': None, 'cookiesfrombrowser': None, 'usenetrc': False,
+            'download_archive': None, 'socket_timeout': 35,
+            'retries': 0, 'fragment_retries': 0, 'extractor_retries': 0,
+            'skip_unavailable_fragments': False, 'max_filesize': MAX_BYTES,
+            'match_filter': validate, 'progress_hooks': [hook],
+            'logger': Logger(), 'quiet': True, 'noprogress': True,
+        }
         try:
-            with request(url) as response, dest.open("wb") as out:
-                size = 0
-                while True:
-                    check_cancel()
-                    chunk = response.read(256 * 1024)
-                    if not chunk:
-                        break
-                    size += len(chunk)
-                    if size > MAX_BYTES:
-                        raise ValueError("视频超过 1 GB，请先裁剪或压缩。")
-                    out.write(chunk)
-                    progress(min(90, 10 + int(size / max(total, size) * 80)), "下载视频画面")
-            if total and size != total:
-                raise ValueError("视频下载不完整，请重试。")
-            error = None
-            break
-        except (OSError, ValueError) as exc:
-            error = exc
-            if isinstance(exc, urllib.error.HTTPError) and exc.code in (401, 412, 429):
-                break  # Do not retry access refusals or rate limits against backup URLs.
-    if error or not dest.exists():
-        raise ValueError(describe_error(error) if error else "视频下载失败，请重试或上传本地视频。") from error
+            with YoutubeDL(options) as ydl:
+                info = ydl.extract_info(canonical, download=True)
+        except DownloadError as exc:
+            check_cancel()
+            raise ValueError(downloader_error(exc)) from exc
+        check_cancel()
+        if not info or info.get('_type', 'video') != 'video':
+            raise ValueError("视频来源未返回单个视频，请检查链接。")
+        if not target.is_file() or not 0 < target.stat().st_size <= MAX_BYTES:
+            raise ValueError("视频未完整下载，或文件超过 1 GB，请重试或使用「本地视频」。")
+        validate(info)
+        dest = folder / 'source.mp4'
+        target.replace(dest)
     return dest, {
-        "title": info["title"] if part == 1 else info["title"] + " · " + page["part"],
-        "source": f"https://www.bilibili.com/video/{bvid}/?p={part}",
-        "author": info.get("owner", {}).get("name", ""),
-        "quality": play.get("quality"),
+        'title': info.get('title') or bvid, 'source': canonical,
+        'author': info.get('uploader') or '', 'quality': info.get('height'),
     }
 
 

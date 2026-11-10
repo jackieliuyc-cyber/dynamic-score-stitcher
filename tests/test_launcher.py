@@ -31,7 +31,7 @@ class LauncherTests(unittest.TestCase):
             (binaries / 'python3').symlink_to(old / 'python')
             env = dict(os.environ, PATH=str(binaries) + os.pathsep + os.environ.get('PATH', ''))
             # These modules isolate bootstrap from network/package installation.
-            for module in ('cv2', 'numpy', 'PIL'):
+            for module in ('cv2', 'numpy', 'PIL', 'yt_dlp'):
                 (root / (module + '.py')).write_text('')
             (root / 'app.py').write_text(
                 'import json, sys\nfrom pathlib import Path\n'

@@ -12,7 +12,7 @@ import urllib.error
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import app
-from sources import describe_error, download
+from sources import describe_error
 
 
 class ErrorTests(unittest.TestCase):
@@ -37,18 +37,6 @@ class ErrorTests(unittest.TestCase):
             with self.subTest(cause=type(cause).__name__):
                 self.assertIn(expected, describe_error(urllib.error.URLError(cause)))
 
-    def test_download_preserves_rate_limit_and_does_not_try_backups(self):
-        metadata = {'pages': [{'cid': 1, 'duration': 10}], 'title': 'Test'}
-        playback = {'durl': [{'url': 'https://a.bilivideo.com/test.mp4', 'size': 10,
-                              'backup_url': ['https://b.bilivideo.com/test.mp4']}]}
-        error = urllib.error.HTTPError('https://a.bilivideo.com/test.mp4', 429,
-                                       'Too Many Requests', {}, None)
-        with tempfile.TemporaryDirectory() as folder, \
-                patch('sources.api', side_effect=[metadata, playback]), \
-                patch('sources.request', side_effect=error) as request:
-            with self.assertRaisesRegex(ValueError, 'HTTP 429'):
-                download('BV14a4y117MF', Path(folder), lambda *_: None, lambda: None)
-            request.assert_called_once()
 
 
 if __name__ == '__main__':

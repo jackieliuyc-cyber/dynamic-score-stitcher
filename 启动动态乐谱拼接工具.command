@@ -43,8 +43,8 @@ if ! compatible_python .venv/bin/python; then
   printf '创建本地环境，使用 %s（%s）…\n' "$interpreter" "$("$interpreter" --version)"
   "$interpreter" -m venv .venv
 fi
-if ! .venv/bin/python -c 'import cv2, numpy, PIL' >/dev/null 2>&1; then
-  printf '安装图像处理依赖（需要网络）…\n'
+if ! .venv/bin/python -c 'import cv2, numpy, PIL, yt_dlp' >/dev/null 2>&1; then
+  printf '安装图像处理和视频下载依赖（需要网络）…\n'
   .venv/bin/python -m pip install --upgrade pip
   .venv/bin/python -m pip install -r requirements.txt
 fi
