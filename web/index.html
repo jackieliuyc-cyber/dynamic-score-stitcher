@@ -2,27 +2,27 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>鼓谱拼图 · 把动态鼓谱留在一张纸上</title>
+  <title>动态乐谱拼接工具 · 把动态乐谱留在一张纸上</title>
   <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
 </head>
 <body>
-<header class="topbar"><a class="brand" href="/" aria-label="鼓谱拼图首页"><span class="brand-icon">▥</span> 鼓谱拼图 <span class="version">LOCAL / 01</span></a><span class="local"><i></i> 本机处理</span></header>
+<header class="topbar"><a class="brand" href="/" aria-label="动态乐谱拼接工具首页"><span class="brand-icon">▥</span> 动态乐谱拼接工具 <span class="version">LOCAL / 01</span></a><span class="local"><i></i> 本机处理</span></header>
 <main>
-  <section class="intro"><p class="eyebrow">VIDEO → DRUM SCORE</p><h1>把滚动的节奏，<br>留在一张纸上<span>。</span></h1><p class="lede">粘贴视频链接，提取完整谱行，拼成一张可以收藏的鼓谱。</p></section>
+  <section class="intro"><p class="eyebrow">VIDEO → SHEET MUSIC</p><h1>把滚动的乐谱，<br>留在一张纸上<span>。</span></h1><p class="lede">粘贴视频链接，提取完整谱行，拼成一张可以收藏的乐谱。</p></section>
   <div class="workspace">
     <aside>
       <section class="card source-card">
         <div class="section-heading"><span class="step">01</span><h2>选择视频</h2></div>
         <div class="tabs" role="tablist"><button role="tab" aria-selected="true" id="link-tab">视频链接</button><button role="tab" aria-selected="false" id="upload-tab">本地视频</button></div>
-        <form id="link-form"><label for="url">B站视频链接 / BV 号</label><textarea id="url" rows="3" placeholder="https://www.bilibili.com/video/BV…" required></textarea><button class="example" type="button" id="example">试试《第一天》的动态鼓谱 ↗</button><button class="primary wide" id="read-button" type="submit">读取视频 <span>→</span></button></form>
+        <form id="link-form"><label for="url">B站视频链接 / BV 号</label><textarea id="url" rows="3" placeholder="https://www.bilibili.com/video/BV…" required></textarea><button class="example" type="button" id="example">示例：第一天 · 鼓谱 ↗</button><button class="primary wide" id="read-button" type="submit">读取视频 <span>→</span></button></form>
         <div id="upload-panel" hidden><label class="dropzone" id="dropzone" for="file"><span class="upload-symbol">↑</span><strong>选择或拖入视频</strong><small>MP4、MOV、MKV · 最大 1 GB</small><input id="file" type="file" accept="video/*,.mkv,.flv,.webm"></label><p class="hint">视频留在本机，不会上传到云端。</p></div>
       </section>
-      <section class="note"><span>支持什么样的视频？</span><p>适合白底、清晰的五线鼓谱，纵向滚动或逐页切换。有演奏画面时，先框选谱面。横向滚动、透视拍摄暂不支持。</p></section>
+      <section class="note"><span>支持什么样的视频？</span><p>适合鼓谱及旋律五线谱，白底清晰、纵向滚动或逐页切换。有演奏画面时，先框选谱面。简谱、六线谱、横向滚动暂不支持；钢琴双谱表可能拆行，需人工核对。</p></section>
       <section class="recent" id="recent-section" hidden><h3>最近的结果</h3><div id="recent-list"></div></section>
       <p class="footnote">直接截取原谱 · 保留音符与演奏记号</p>
     </aside>
     <section class="main-panel">
-      <div id="empty" class="empty card"><div class="paper-demo" aria-hidden="true"><div class="paper-title"></div><div class="music-line">♩ &nbsp; ♪ &nbsp; ♩ &nbsp; ♫</div><div class="music-line">♫ &nbsp; ♩ &nbsp; ♪ &nbsp; ♩</div><div class="music-line">♩ &nbsp; ♫ &nbsp; ♩ &nbsp; ♪</div><div class="paper-bottom"></div></div><h2>下一张完整鼓谱，从这里开始</h2><p>读取视频后，确认谱面区域，再一键拼接。</p><div class="empty-steps"><span>01 读取视频</span><b>→</b><span>02 确认谱面</span><b>→</b><span>03 导出长图</span></div></div>
+      <div id="empty" class="empty card"><div class="paper-demo" aria-hidden="true"><div class="paper-title"></div><div class="music-line">♩ &nbsp; ♪ &nbsp; ♩ &nbsp; ♫</div><div class="music-line">♫ &nbsp; ♩ &nbsp; ♪ &nbsp; ♩</div><div class="music-line">♩ &nbsp; ♫ &nbsp; ♩ &nbsp; ♪</div><div class="paper-bottom"></div></div><h2>下一张完整乐谱，从这里开始</h2><p>读取视频后，确认谱面区域，再一键拼接。</p><div class="empty-steps"><span>01 读取视频</span><b>→</b><span>02 确认谱面</span><b>→</b><span>03 导出长图</span></div></div>
       <div class="card status" id="status-panel" hidden aria-live="polite"><div class="status-top"><span class="spinner" id="spinner"></span><strong id="status-title">正在读取视频</strong><span id="percent">0%</span></div><progress id="progress" max="100" value="0"></progress><div class="status-bottom"><span id="status-message"></span><button class="text-button" id="cancel">取消</button></div></div>
       <div class="error" id="error" hidden role="alert"></div>
       <section class="card setup" id="setup" hidden>
@@ -31,18 +31,18 @@
         <div class="preview-top"><p>在画面上拖动，框选完整谱面区域。</p><button class="text-button" id="reset-crop">恢复全画面</button></div>
         <div class="canvas-wrap"><canvas id="crop-canvas" aria-label="视频预览，可拖动框选谱面"></canvas></div>
         <div class="preview-controls"><label for="preview-time">预览位置</label><input id="preview-time" type="range" min="0" step="1" value="0"><output id="preview-time-label">00:00</output><button class="secondary small" id="refresh-preview">查看这一帧</button></div>
-        <details><summary>时间范围与精度</summary><div class="settings-grid"><label>开始（秒）<input id="start" type="number" min="0" step="0.1" value="0"></label><label>结束（秒）<input id="end" type="number" min="1" step="0.1"></label><label>采样间隔<select id="interval"><option value="1">标准 · 每 1 秒</option><option value="0.5">精细 · 每 0.5 秒</option><option value="2">快速 · 每 2 秒</option></select></label></div><p class="hint">换页很快时选择「精细」。片头没有鼓谱时可调整开始时间。</p><div class="settings-grid crop-values"><label>左 %<input id="crop-left" type="number" min="0" max="100" value="0"></label><label>上 %<input id="crop-top" type="number" min="0" max="100" value="0"></label><label>右 %<input id="crop-right" type="number" min="0" max="100" value="100"></label><label>下 %<input id="crop-bottom" type="number" min="0" max="100" value="100"></label></div></details>
-        <button class="primary wide" id="process">生成完整鼓谱 <span>↗</span></button>
+        <details><summary>时间范围与精度</summary><div class="settings-grid"><label>开始（秒）<input id="start" type="number" min="0" step="0.1" value="0"></label><label>结束（秒）<input id="end" type="number" min="1" step="0.1"></label><label>采样间隔<select id="interval"><option value="1">标准 · 每 1 秒</option><option value="0.5">精细 · 每 0.5 秒</option><option value="2">快速 · 每 2 秒</option></select></label></div><p class="hint">换页很快时选择「精细」。片头没有乐谱时可调整开始时间。</p><div class="settings-grid crop-values"><label>左 %<input id="crop-left" type="number" min="0" max="100" value="0"></label><label>上 %<input id="crop-top" type="number" min="0" max="100" value="0"></label><label>右 %<input id="crop-right" type="number" min="0" max="100" value="100"></label><label>下 %<input id="crop-bottom" type="number" min="0" max="100" value="100"></label></div></details>
+        <button class="primary wide" id="process">生成完整乐谱 <span>↗</span></button>
       </section>
       <section id="result" hidden>
-        <div class="card result-header"><div><p class="eyebrow">READY TO PLAY</p><h2>你的鼓谱，拼好了。</h2><p id="result-meta"></p></div><a class="primary" id="download" download="完整鼓谱.png">下载 PNG ↓</a></div>
+        <div class="card result-header"><div><p class="eyebrow">READY TO PLAY</p><h2>你的乐谱，拼好了。</h2><p id="result-meta"></p></div><a class="primary" id="download" download="完整乐谱.png">下载 PNG ↓</a></div>
         <div class="warning" id="warnings" hidden></div>
         <div class="result-toolbar"><div class="tabs compact"><button id="long-tab" aria-selected="true">完整长图</button><button id="rows-tab" aria-selected="false">检查谱行</button></div><button class="text-button" id="reprocess">重新选择区域</button></div>
-        <div class="score-preview card" id="long-view"><a id="full-image" target="_blank" rel="noopener"><img id="score-image" alt="完整鼓谱预览，点击查看原尺寸图片"></a></div>
+        <div class="score-preview card" id="long-view"><a id="full-image" target="_blank" rel="noopener"><img id="score-image" alt="完整乐谱预览，点击查看原尺寸图片"></a></div>
         <div id="rows-view" hidden><p class="hint">按原顺序检查谱行。可以取消误识别的行，或用箭头调整顺序。原始识别结果会保留。</p><div id="row-list"></div><div class="save-bar"><span id="selected-count"></span><button class="primary" id="rebuild">按选中谱行重新导出</button></div></div>
       </section>
     </section>
   </div>
 </main>
-<footer><span>鼓谱拼图</span><span>给每一次练习，留一份清楚的谱。</span></footer>
+<footer><span>动态乐谱拼接工具</span><span>给每一次练习，留一份清楚的谱。</span></footer>
 </body></html>

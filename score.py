@@ -39,7 +39,7 @@ def staves(rgb):
         gaps = np.diff(group)
         gap = float(np.median(gaps))
         if 3 <= gap <= h / 18 and np.max(np.abs(gaps - gap)) <= max(1.5, gap * .19):
-            # Five staff lines, with space for cymbal marks, dynamics and lower stems.
+            # Five staff lines, with space for ledger lines, dynamics and stems.
             top, bottom = round(group[0] - gap * 6.3), round(group[-1] + gap * 3.8)
             if top >= 3 and bottom <= h - 3:
                 systems.append({"y": group[0], "gap": gap, "top": top, "bottom": bottom})
@@ -172,7 +172,7 @@ def compose(folder, metadata, selected=None):
         raise ValueError("谱图过大，请缩短选取的时间段再生成。")
     out = Image.new("L", (width + pad * 2, height), 255)
     draw = ImageDraw.Draw(out)
-    title = metadata.get("title", "完整鼓谱")
+    title = metadata.get("title", "完整乐谱")
     title_font = font(max(22, width // 36))
     while draw.textlength(title, font=title_font) > width and len(title) > 8:
         title = title[:-2] + "…"
@@ -322,7 +322,7 @@ def extract(source, folder, metadata, options, progress, check_cancel):
         process.stdout.close()
         log.close()
     if not records:
-        raise ValueError("没有识别到完整的五线谱。请框选谱面区域，或选择鼓谱清晰可见的时间段。")
+        raise ValueError("没有识别到完整的五线谱。请框选谱面区域，或选择乐谱清晰可见的时间段。")
     records.sort(key=lambda r: (r["segment"], r["position"]))
     if page_breaks:
         warnings.append(f"检测到 {page_breaks} 次无法连续对齐的画面切换，请检查切换附近是否重行或漏行。")

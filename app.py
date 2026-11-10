@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A loopback-only local web app for assembling video drum scores."""
+"""A loopback-only local web app for assembling video sheet music."""
 import argparse
 import concurrent.futures
 import json
@@ -95,7 +95,7 @@ def process_job(job, options):
     result = extract(folder / "source.mp4", folder, metadata, options,
                      lambda n, m: update(job, progress=n, message=m), lambda: checkpoint(job))
     checkpoint(job)
-    update(job, state="done", progress=100, message="完整鼓谱已生成", result=result)
+    update(job, state="done", progress=100, message="完整乐谱已生成", result=result)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -151,7 +151,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'")
         if file.name == "score.png":
-            self.send_header("Content-Disposition", "inline; filename=drum-score.png")
+            self.send_header("Content-Disposition", "inline; filename=sheet-music.png")
         self.end_headers()
         with file.open("rb") as stream:
             while block := stream.read(256 * 1024):
@@ -169,7 +169,7 @@ class Handler(BaseHTTPRequestHandler):
             if size <= 0 or size > MAX_BYTES:
                 return self.json(413, {"error": "文件为空或超过 1 GB。"})
             if parsed.path == "/api/upload":
-                name = urllib.parse.parse_qs(parsed.query).get("name", ["本地鼓谱视频"])[0]
+                name = urllib.parse.parse_qs(parsed.query).get("name", ["本地乐谱视频"])[0]
                 job = new_job(Path(name).stem[:100])
                 update(job, state="uploading", message="正在接收视频")
                 remaining = size
@@ -234,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="鼓谱拼图：本地视频鼓谱提取工具")
+    parser = argparse.ArgumentParser(description="动态乐谱拼接工具：本地视频乐谱提取工具")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
@@ -245,7 +245,7 @@ def main():
             result = json.loads(result_file.read_text(encoding="utf-8"))
             key = result_file.parent.name
             JOBS[key] = {"id": key, "title": result["title"], "state": "done", "progress": 100,
-                         "message": "完整鼓谱已生成", "result": result, "cancel": threading.Event(),
+                         "message": "完整乐谱已生成", "result": result, "cancel": threading.Event(),
                          "path": str(result_file.parent), "created": result_file.stat().st_mtime,
                          **{k: result[k] for k in ("source", "author", "video")}}
         except (ValueError, KeyError, OSError):
@@ -255,7 +255,7 @@ def main():
     except OSError as exc:
         raise SystemExit(f"端口 {args.port} 无法使用，可运行 python app.py --port 8766。\n{exc}")
     url = f"http://127.0.0.1:{args.port}"
-    print(f"\n鼓谱拼图已启动 → {url}\n文件保存在 {DATA}\n按 Ctrl+C 停止。\n", flush=True)
+    print(f"\n动态乐谱拼接工具已启动 → {url}\n文件保存在 {DATA}\n按 Ctrl+C 停止。\n", flush=True)
     if not args.no_browser:
         webbrowser.open(url)
     try:

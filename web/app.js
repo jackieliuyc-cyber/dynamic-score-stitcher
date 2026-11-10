@@ -146,7 +146,7 @@ function renderResult() {
   // Retain the user's custom order and show excluded rows after the selection.
   if(result.selected)rowOrder=[...result.selected,...rowOrder.filter(id=>!selected.has(id))];
   $('result-meta').textContent=`${selected.size} 行谱面 · ${result.output_size.join(' × ')} px · PNG 无损图片`;
-  $('download').href=fileUrl('score.png',true);$('download').download=`${result.title.replace(/[\\/:*?"<>|]/g,'-')}-完整鼓谱.png`;
+  $('download').href=fileUrl('score.png',true);$('download').download=`${result.title.replace(/[\\/:*?"<>|]/g,'-')}-完整乐谱.png`;
   $('full-image').href=fileUrl('score.png',true);$('score-image').src=fileUrl('thumbnail.png',true);
   const warnings=result.warnings||[];show('warnings',warnings.length>0);$('warnings').textContent=warnings.join(' ');
   resultView='long';setResultView('long');renderRows();
@@ -164,7 +164,7 @@ function renderRows() {
     checkbox.onchange=()=>{checkbox.checked?selected.add(id):selected.delete(id);card.classList.toggle('excluded',!checkbox.checked);updateCount();};
     label.append(checkbox,document.createTextNode(`第 ${index+1} 行 · 原视频 ${stamp(row.time)}`));controls.append(label);
     [-1,1].forEach(direction=>{const button=document.createElement('button');button.textContent=direction<0?'↑':'↓';button.setAttribute('aria-label',`将第 ${index+1} 行${direction<0?'上':'下'}移`);button.disabled=index+direction<0||index+direction>=rowOrder.length;button.onclick=()=>{[rowOrder[index],rowOrder[index+direction]]=[rowOrder[index+direction],rowOrder[index]];renderRows();};controls.append(button);});
-    const image=document.createElement('img');image.loading='lazy';image.src=fileUrl(row.file);image.alt=`第 ${index+1} 行鼓谱`;
+    const image=document.createElement('img');image.loading='lazy';image.src=fileUrl(row.file);image.alt=`第 ${index+1} 行乐谱`;
     card.append(controls,image);container.append(card);
   });updateCount();
 }

@@ -30,6 +30,31 @@ def document(rows=8):
     return image
 
 
+def melody_document(rows=8):
+    """Synthetic pitched notation with accidentals, ledger lines and slurs."""
+    image = np.full((rows * 140 + 500, 1280, 3), 250, np.uint8)
+    for row in range(rows):
+        top = 180 + row * 140
+        cv2.putText(image, str(row + 1), (22, top - 20), cv2.FONT_HERSHEY_SIMPLEX, .45, (10, 10, 10), 1)
+        for i in range(5):
+            cv2.line(image, (30, top + i * 9), (1220, top + i * 9), (50, 50, 50), 1)
+        for index, x in enumerate(range(100, 1200, 90)):
+            pitch = (-18, 0, 9, 27, 45, 54)[(index + row) % 6]
+            y = top + pitch
+            cv2.ellipse(image, (x, y), (6, 4), -25, 0, 360, (0, 0, 0), -1)
+            direction = 1 if pitch < 18 else -1
+            stem_x = x - 6 if direction == 1 else x + 6
+            cv2.line(image, (stem_x, y), (stem_x, y + direction * 30), (0, 0, 0), 2)
+            for ledger in list(range(-9, pitch - 1, -9)) if pitch < 0 else list(range(45, pitch + 1, 9)):
+                cv2.line(image, (x - 11, top + ledger), (x + 11, top + ledger), (0, 0, 0), 1)
+            if index % 3 == 0:
+                cv2.putText(image, '#' if index % 2 else 'b', (x - 25, y + 5), cv2.FONT_HERSHEY_SIMPLEX, .45, (0, 0, 0), 1)
+        cv2.ellipse(image, (250, top - 22), (65, 15), 0, 180, 360, (0, 0, 0), 1)
+        for x in (30, 330, 630, 930, 1220):
+            cv2.line(image, (x, top), (x, top + 36), (10, 10, 10), 1)
+    return image
+
+
 class ScoreTests(unittest.TestCase):
     def test_staff_detection(self):
         rows = staves(document()[:720])
@@ -74,10 +99,16 @@ class ScoreTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which('ffmpeg'), 'FFmpeg required')
     def test_repeated_rows_survive_full_video_pipeline(self):
+        self.check_video_pipeline(document())
+
+    @unittest.skipUnless(shutil.which('ffmpeg'), 'FFmpeg required')
+    def test_pitched_melody_survives_full_video_pipeline(self):
+        self.check_video_pipeline(melody_document(), verify_symbols=True)
+
+    def check_video_pipeline(self, doc, verify_symbols=False):
         with tempfile.TemporaryDirectory() as d:
             folder = Path(d)
             source = folder / 'repeat.mp4'
-            doc = document()
             offsets = list(range(0, 700, 86)) + [700]
             p = subprocess.Popen(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y',
                                   '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '1280x720',
@@ -97,6 +128,18 @@ class ScoreTests(unittest.TestCase):
             self.assertEqual(result['page_breaks'], 0)
             with Image.open(out / 'score.png') as output:
                 self.assertGreater(output.height, 1000)
+            if verify_symbols:
+                # Match every exported row against the original document, so
+                # missing notes/ledger lines or reordered rows fail this check.
+                expected = doc[:, 13:1267, 0]
+                positions = []
+                for row in result['rows']:
+                    actual = np.asarray(Image.open(out / row['file']).convert('L'))
+                    scores = cv2.matchTemplate(expected, actual, cv2.TM_CCOEFF_NORMED)
+                    _, confidence, _, position = cv2.minMaxLoc(scores)
+                    self.assertGreater(confidence, .9)
+                    positions.append(position[1])
+                self.assertEqual(positions, sorted(set(positions)))
 
     def test_bad_crop_and_range(self):
         meta = {'video': {'width': 1280, 'height': 720, 'duration': 10}}
