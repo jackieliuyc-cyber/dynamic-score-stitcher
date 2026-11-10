@@ -2,6 +2,9 @@
 """A loopback-only local web app for assembling video sheet music."""
 import argparse
 import concurrent.futures
+import errno
+import hashlib
+import http.client
 import json
 import mimetypes
 import os
@@ -18,6 +21,7 @@ from score import compose, extract
 from sources import MAX_BYTES, describe_error, download, preview, probe
 
 ROOT = Path(__file__).resolve().parent
+INSTANCE_ID = hashlib.sha256(str(ROOT).encode()).hexdigest()
 DATA = ROOT / ".runtime"
 JOBS = {}
 LOCK = threading.RLock()
@@ -124,7 +128,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.json(403, {"error": "只允许本机访问。"})
         path = urllib.parse.urlparse(self.path).path
         if path == "/api/health":
-            return self.json(200, {"ok": True, "version": "1.0"})
+            return self.json(200, {"ok": True, "version": "1.0",
+                                   "app": "dynamic-score-stitcher", "instance": INSTANCE_ID})
         if path == "/api/jobs":
             with LOCK:
                 jobs = [public(j) for j in reversed(list(JOBS.values()))]
@@ -233,11 +238,57 @@ class Handler(BaseHTTPRequestHandler):
             self.json(500, {"error": "操作未完成，请重试。"})
 
 
+def is_running_instance(port):
+    # Direct loopback connection: do not send this check through system proxies.
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=0.6)
+    try:
+        connection.request("GET", "/api/health")
+        response = connection.getresponse()
+        if response.status != 200:
+            return False
+        data = json.loads(response.read(4096))
+        return (isinstance(data, dict) and data.get("ok") is True
+                and data.get("app") == "dynamic-score-stitcher"
+                and data.get("instance") == INSTANCE_ID)
+    except (OSError, ValueError, http.client.HTTPException):
+        return False
+    finally:
+        connection.close()
+
+
+def select_server(port=None):
+    ports = range(8765, 8775) if port is None else [port]
+    # Reuse an instance on a fallback port even if an earlier port is free again.
+    for candidate in ports:
+        if is_running_instance(candidate):
+            return None, f"http://127.0.0.1:{candidate}"
+    for candidate in ports:
+        try:
+            server = ThreadingHTTPServer(("127.0.0.1", candidate), Handler)
+            return server, f"http://127.0.0.1:{server.server_port}"
+        except OSError as exc:
+            if exc.errno != errno.EADDRINUSE:
+                raise SystemExit(f"无法启动本地服务：{exc}") from exc
+            if is_running_instance(candidate):
+                return None, f"http://127.0.0.1:{candidate}"
+            if port is not None:
+                raise SystemExit(f"指定端口 {port} 已被占用或服务无响应。请省略 --port 自动选择端口。") from exc
+    raise SystemExit("端口 8765–8774 均不可用，请使用 --port 指定其他端口。")
+
+
 def main():
     parser = argparse.ArgumentParser(description="动态乐谱拼接工具：本地视频乐谱提取工具")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--port", type=int, default=None)
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
+    if args.port is not None and not 1 <= args.port <= 65535:
+        parser.error("端口应在 1–65535 之间")
+    server, url = select_server(args.port)
+    if server is None:
+        print(f"工具已在运行 → {url}", flush=True)
+        if not args.no_browser:
+            webbrowser.open(url)
+        return
     DATA.mkdir(exist_ok=True)
     # Restore completed jobs only; never silently resume network or CPU work.
     for result_file in sorted(DATA.glob("*/result.json"), key=lambda p: p.stat().st_mtime):
@@ -250,11 +301,6 @@ def main():
                          **{k: result[k] for k in ("source", "author", "video")}}
         except (ValueError, KeyError, OSError):
             continue
-    try:
-        server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
-    except OSError as exc:
-        raise SystemExit(f"端口 {args.port} 无法使用，可运行 python app.py --port 8766。\n{exc}")
-    url = f"http://127.0.0.1:{args.port}"
     print(f"\n动态乐谱拼接工具已启动 → {url}\n文件保存在 {DATA}\n按 Ctrl+C 停止。\n", flush=True)
     if not args.no_browser:
         webbrowser.open(url)
