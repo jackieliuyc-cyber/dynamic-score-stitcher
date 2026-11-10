@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from score import compose, extract
-from sources import MAX_BYTES, download, preview, probe
+from sources import MAX_BYTES, describe_error, download, preview, probe
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / ".runtime"
@@ -62,7 +62,7 @@ def run(job, operation):
         update(job, state="cancelled", message="已取消，可以重新选择视频。")
     except Exception as exc:
         # Paths, media CDN signatures and tracebacks stay out of the browser UI.
-        message = str(exc) if isinstance(exc, ValueError) else "处理失败。请检查网络、视频格式和 FFmpeg 安装后重试。"
+        message = describe_error(exc)
         update(job, state="error", message=message)
         print(f"Job {job['id']}: {type(exc).__name__}: {exc}", flush=True)
 

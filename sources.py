@@ -2,13 +2,45 @@
 import json
 import re
 import shutil
+import socket
+import ssl
 import subprocess
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 MAX_BYTES = 1024 * 1024 * 1024
 HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.bilibili.com/"}
+
+
+def describe_error(error):
+    """Actionable UI errors without leaking URLs, cookies or local paths."""
+    if isinstance(error, urllib.error.HTTPError):
+        if error.code in (401, 403, 412):
+            return (f"视频来源拒绝自动读取（HTTP {error.code}）。请先在浏览器打开视频确认可播放；"
+                    "若仍无法读取，请选择「本地视频」导入文件。")
+        if error.code == 429:
+            return "视频来源请求过于频繁（HTTP 429），请稍后再试，或使用「本地视频」。"
+        if error.code == 404:
+            return "未找到视频资源（HTTP 404），请检查链接是否有效，或使用「本地视频」。"
+        return f"视频来源请求失败（HTTP {error.code}），请稍后重试，或使用「本地视频」。"
+    cause = error.reason if isinstance(error, urllib.error.URLError) else error
+    if isinstance(cause, ssl.SSLCertVerificationError):
+        return "HTTPS 证书校验失败，请检查系统时间及 Python 证书配置，或使用「本地视频」。"
+    if isinstance(cause, (TimeoutError, socket.timeout)):
+        return "连接视频来源超时，请检查网络后重试，或使用「本地视频」。"
+    if isinstance(cause, socket.gaierror):
+        return "无法解析视频来源地址，请检查网络和 DNS 设置后重试。"
+    if isinstance(error, urllib.error.URLError):
+        return "无法连接视频来源，请检查网络及代理设置，或使用「本地视频」。"
+    if isinstance(error, subprocess.TimeoutExpired):
+        return "视频解码或预览生成超时，请缩短视频，或转换为 MP4 后重试。"
+    if isinstance(error, subprocess.CalledProcessError):
+        return "视频解码失败，请确认文件完整且可播放，或转换为 MP4 后重试。"
+    if isinstance(error, ValueError):
+        return str(error)
+    return "处理失败。请查看启动窗口中的错误详情后重试。"
 
 
 def request(url):
@@ -114,8 +146,10 @@ def download(link, folder, progress, check_cancel):
             break
         except (OSError, ValueError) as exc:
             error = exc
+            if isinstance(exc, urllib.error.HTTPError) and exc.code in (401, 412, 429):
+                break  # Do not retry access refusals or rate limits against backup URLs.
     if error or not dest.exists():
-        raise ValueError("视频下载失败，请重试或上传本地视频。") from error
+        raise ValueError(describe_error(error) if error else "视频下载失败，请重试或上传本地视频。") from error
     return dest, {
         "title": info["title"] if part == 1 else info["title"] + " · " + page["part"],
         "source": f"https://www.bilibili.com/video/{bvid}/?p={part}",
