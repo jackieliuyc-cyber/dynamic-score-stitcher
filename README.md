@@ -20,6 +20,10 @@ chmod +x 启动动态乐谱拼接工具.command
 
 后续可双击 `启动动态乐谱拼接工具.command`，浏览器会打开 [本地工具页面](http://127.0.0.1:8765)。保持启动的终端窗口运行，使用结束后按 `Ctrl+C`。请保留整个项目文件夹，不要单独移动启动文件。
 
+启动脚本会自动寻找 Python 3.10 或以上的解释器，包括 Homebrew 的 `python3.11` 等带版本号命令。如果已有 `.venv` 使用旧版 Python，脚本会将其备份为 `.venv.backup-日期-时间-进程号`，然后创建兼容的新环境。
+
+若首次安装提示 `No matching distribution found for numpy`，请确认 Python 版本；仅升级旧 Python 环境里的 pip 无法解决 Python 版本不兼容。可先执行 `brew install python@3.11`，再重新双击启动。确认新环境正常后，可以删除项目内的 `.venv.backup-*` 目录以释放空间。
+
 ### 在其他电脑使用
 
 需要 Python 3.10 或以上，以及 FFmpeg / ffprobe。
