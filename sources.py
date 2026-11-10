@@ -19,7 +19,7 @@ def api(path, params):
     with request("https://api.bilibili.com" + path + "?" + urllib.parse.urlencode(params)) as r:
         data = json.load(r)
     if data.get("code") != 0:
-        raise ValueError("B站未能提供视频：" + str(data.get("message", "请求失败")))
+        raise ValueError("视频来源未能提供视频，请稍后重试或上传本地视频。")
     return data["data"]
 
 
@@ -31,7 +31,7 @@ def parse_link(link):
     if url.scheme not in ("https", "http") or url.hostname not in (
         "www.bilibili.com", "bilibili.com", "m.bilibili.com", "b23.tv"
     ) or url.username or url.password or url.port not in (None, 80, 443):
-        raise ValueError("请输入 B站视频链接、b23.tv 分享链接或 BV 号。其他来源请上传本地视频。")
+        raise ValueError("暂不支持此视频来源，请输入已适配的视频链接，或上传本地视频。")
     if url.hostname == "b23.tv":
         # Do not follow arbitrary redirects: validate every destination first.
         class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -57,10 +57,10 @@ def parse_link(link):
         url = urllib.parse.urlparse(link)
     match = re.search(r"/video/(BV[0-9A-Za-z]{10})(?:/|$)", url.path)
     if not match:
-        raise ValueError("没有在链接中找到 BV 号，请复制具体视频的页面链接。")
+        raise ValueError("未能识别视频地址，请复制具体视频的页面链接，或上传本地视频。")
     page = int(urllib.parse.parse_qs(url.query).get("p", ["1"])[0])
     if page < 1:
-        raise ValueError("分 P 编号应大于 0。")
+        raise ValueError("视频分段编号应大于 0。")
     return match.group(1), page
 
 
@@ -70,7 +70,7 @@ def download(link, folder, progress, check_cancel):
     info = api("/x/web-interface/view", {"bvid": bvid})
     pages = info.get("pages", [])
     if part > len(pages):
-        raise ValueError("视频没有指定的分 P。")
+        raise ValueError("视频没有指定的分段。")
     page = pages[part - 1]
     if page.get("duration", 0) > 1800:
         raise ValueError("当前版本支持 30 分钟以内的视频。长视频请先裁剪后上传。")
@@ -80,7 +80,7 @@ def download(link, folder, progress, check_cancel):
     })
     streams = play.get("durl", [])
     if not streams:
-        raise ValueError("B站未返回可读取的视频。可以在本地下载后，使用「上传视频」。")
+        raise ValueError("视频来源未返回可读取的画面，请使用「本地视频」导入文件。")
     if len(streams) != 1:
         raise ValueError("此视频返回多段媒体，请下载为一个完整视频后上传。")
     stream = streams[0]

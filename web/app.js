@@ -18,7 +18,6 @@ async function api(path, body) {
 function lockSources(busy) {
   $('read-button').disabled = busy;
   $('file').disabled = busy;
-  $('example').disabled = busy;
 }
 function tab(source) {
   $('link-tab').setAttribute('aria-selected', String(source === 'link'));
@@ -27,7 +26,6 @@ function tab(source) {
 }
 $('link-tab').onclick = () => tab('link');
 $('upload-tab').onclick = () => tab('upload');
-$('example').onclick = () => { $('url').value = 'https://www.bilibili.com/video/BV1Le411i7Bp/'; $('url').focus(); };
 $('link-form').onsubmit = async event => {
   event.preventDefault(); show('error', false); lockSources(true);
   try { await activate(await api('/api/link', {url: $('url').value.trim()})); }
