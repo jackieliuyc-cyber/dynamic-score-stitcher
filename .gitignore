@@ -11,3 +11,6 @@ __pycache__/
 *.mp4
 *.mov
 *.mkv
+
+# Self-created H5 demonstration score
+!h5/dist/demo.mp4
