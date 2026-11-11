@@ -62,3 +62,8 @@ python3 serve.py
 - 21 项自动测试通过，包括 iPhone MOV、Android 空 MIME、解码失败后重试、取消、缺少 loadeddata 事件、既有谱行提取回归。浏览器控制连接仍超时，iPhone / Android 真机验收尚未完成。
 
 参考：[MDN 文件选择](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file)、[loadeddata 的手机省流限制](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/loadeddata_event)、[媒体错误分类](https://developer.mozilla.org/en-US/docs/Web/API/MediaError/code)。
+
+
+## 短谱行漏识别修复（1.2.1）
+
+修复长谱行和短谱行混排时，短行因横线长度阈值过高被漏掉的问题。保持五条等距谱线的校验，并增加短结束行、短换拍行以及非五线图形的回归测试。23 项自动测试通过。用户提供的视频在本机按 H5 像素处理流程重跑，由 13 行恢复为 15 行；原始视频与提取图片不随源码发布。此验证使用本机 FFmpeg 解码与 H5 JavaScript 引擎，不等同于手机浏览器真机测试。

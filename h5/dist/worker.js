@@ -1,4 +1,4 @@
-import {ScoreEngine} from './engine.js';
+import {ScoreEngine} from './engine.js?v=1.2.1';
 let engine=new ScoreEngine();
 self.onmessage=({data})=>{
   try{

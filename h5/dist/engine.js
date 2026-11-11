@@ -3,7 +3,9 @@ export function detectStaves(gray, w, h) {
   const strength = new Float32Array(h); let peak = 0;
   for (let y=0;y<h;y++) { let dark=0; for(let x=8;x<w-8;x+=2) if(gray[y*w+x]<195)dark++;
     strength[y]=dark/Math.max(1,(w-16)/2);peak=Math.max(peak,strength[y]); }
-  const threshold=Math.max(.30,peak*.64),groups=[];
+  // Ending bars and meter-change rows may occupy only part of the viewport.
+  // Keep the five equally spaced lines check; do not require full-width staves.
+  const threshold=Math.max(.30,peak*.35),groups=[];
   for(let y=0;y<h;y++)if(strength[y]>threshold){const last=groups.at(-1);if(last&&y-last.at(-1)<=2)last.push(y);else groups.push([y]);}
   const lines=groups.map(g=>g.reduce((a,b)=>a+b,0)/g.length), systems=[];
   for(let i=0;i+4<lines.length;){

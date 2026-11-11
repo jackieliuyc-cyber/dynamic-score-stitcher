@@ -1,4 +1,4 @@
-import {planPages} from './engine.js';
+import {planPages} from './engine.js?v=1.2.1';
 import {validCrop, videoProblem} from './input.js';
 import {fileProblem, mediaBlob, mediaMessage, waitForMedia} from './media.js';
 const $=id=>document.getElementById(id),show=(id,on=true)=>$(id).hidden=!on;
@@ -78,7 +78,7 @@ $('reset').onclick=()=>{crop=[0,0,1,1];drawCrop();notice('');};
 $('seek').oninput=()=>{$('time').textContent=stamp(Number($('seek').value));};
 $('seek').onchange=async()=>{if(running)return;try{await seekTo(Number($('seek').value));}catch(e){error(e.message);}};
 function rpc(type,payload={},transfer=[]){const id=++rpcId;return new Promise((resolve,reject)=>{requests.set(id,{resolve,reject});worker.postMessage({type,id,...payload},transfer);});}
-function createWorker(){try{worker=new Worker(new URL('./worker.js',import.meta.url),{type:'module'});}catch{throw new Error('浏览器无法启动图像处理。请用 Safari / Chrome 通过网页地址打开，或刷新后重试。');}worker.onmessage=({data})=>{const call=requests.get(data.id);if(!call)return;requests.delete(data.id);data.error?call.reject(new Error(data.error)):call.resolve(data);};worker.onerror=()=>{for(const call of requests.values())call.reject(new Error('图像分析模块加载失败。请刷新页面后重试，或换用 Safari / Chrome。'));requests.clear();};}
+function createWorker(){try{worker=new Worker(new URL('./worker.js?v=1.2.1',import.meta.url),{type:'module'});}catch{throw new Error('浏览器无法启动图像处理。请用 Safari / Chrome 通过网页地址打开，或刷新后重试。');}worker.onmessage=({data})=>{const call=requests.get(data.id);if(!call)return;requests.delete(data.id);data.error?call.reject(new Error(data.error)):call.resolve(data);};worker.onerror=()=>{for(const call of requests.values())call.reject(new Error('图像分析模块加载失败。请刷新页面后重试，或换用 Safari / Chrome。'));requests.clear();};}
 async function acquireWake(){try{if(navigator.wakeLock&&document.visibilityState==='visible')wake=await navigator.wakeLock.request('screen');}catch{/* Screen lock support is optional. */}}
 async function releaseWake(){try{await wake?.release();}catch{}wake=null;}
 function setPaused(value){paused=value;$('pause').textContent=value?'继续处理':'暂停';$('progress-title').textContent=value?'已暂停':'正在寻找谱行';if(value)releaseWake();else acquireWake();}
