@@ -24,7 +24,9 @@ def staves(rgb):
     dark = (gray < 175).astype(np.uint8)
     horizontal = cv2.morphologyEx(dark, cv2.MORPH_OPEN, np.ones((1, max(30, w // 7)), np.uint8))
     strength = horizontal.mean(axis=1)
-    ys = np.flatnonzero(strength > max(.24, float(strength.max()) * .60))
+    # Final bars and meter-change rows can be much shorter than adjacent rows.
+    # Morphological line filtering and five-line spacing still reject note beams.
+    ys = np.flatnonzero(strength > max(.24, float(strength.max()) * .35))
     clusters = []
     for y in ys:
         if clusters and y - clusters[-1][-1] <= 2:

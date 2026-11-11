@@ -61,6 +61,28 @@ class ScoreTests(unittest.TestCase):
         self.assertEqual(len(rows), 4)
         self.assertAlmostEqual(rows[0]['gap'], 9)
 
+    def test_short_staves_survive_next_to_full_width_rows(self):
+        image = document()[:720].copy()
+        for top in (320, 600):
+            image[top - 60:top + 80, 660:] = 250
+            cv2.line(image, (659, top), (659, top + 36), (10, 10, 10), 1)
+        self.assertEqual([row["y"] for row in staves(image)], [180, 320, 460, 600])
+
+    def test_short_beams_without_five_equal_lines_are_rejected(self):
+        image = np.full((720, 1280, 3), 250, np.uint8)
+        for y in (180, 189, 198, 207, 400, 409, 418, 440, 449):
+            cv2.line(image, (30, y), (659, y), (50, 50, 50), 1)
+        self.assertEqual(staves(image), [])
+
+    @unittest.skipUnless(shutil.which('ffmpeg'), 'FFmpeg required')
+    def test_short_middle_and_last_rows_survive_video_pipeline(self):
+        image = document()
+        for index in (3, 7):
+            top = 180 + index * 140
+            image[top - 60:top + 80, 660:] = 250
+            cv2.line(image, (659, top), (659, top + 36), (10, 10, 10), 1)
+        self.check_video_pipeline(image, verify_symbols=True)
+
     def test_identical_grooves_choose_correct_scroll(self):
         d = document()
         shift, confidence = scroll_shift(d[:720, :, 0], d[86:806, :, 0])
