@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#f4f3ed"><meta name="description" content="在手机浏览器里，把动态乐谱视频拼成完整图片。无需安装，视频不上传。"><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./style.css?v=1.2.0"><title>动态乐谱拼接工具 · H5 版</title><script type="module" src="./app.js?v=1.2.1"></script></head>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#f4f3ed"><meta name="description" content="在手机浏览器里，把动态乐谱视频拼成完整图片。无需安装，视频不上传。"><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./style.css?v=1.3.0"><title>动态乐谱拼接工具 · H5 版</title><script type="module" src="./app.js?v=1.2.1"></script></head>
 <body><noscript><p class="error">请开启浏览器的 JavaScript，才能在本机处理视频。</p></noscript><header><a class="brand" href="./"><span class="logo">▥</span>动态乐谱拼接工具 <small>H5 版</small></a><span class="privacy"><i></i>设备内处理</span></header>
 <main><section class="hero"><p class="eyebrow">YOUR SHEET MUSIC, ANYWHERE</p><h1>把动态乐谱，<br>装进口袋<span>。</span></h1><p>系统录屏，导入视频，拼出完整乐谱。<br>无需电脑，视频留在你的设备上。</p><div class="tags"><span>无需安装</span><span>视频不上传</span><span>PNG 图片</span></div></section>
 <section class="record-guide" aria-labelledby="record-guide-title">
@@ -14,4 +14,14 @@
 <section class="card processing" id="processing" hidden aria-live="polite"><div class="section-title"><span class="pulse"></span><h2 id="progress-title">正在寻找谱行</h2><span class="meta" id="percent">0%</span></div><progress max="100" value="0" id="progress"></progress><div class="progress-details"><span id="progress-text">准备视频画面…</span><span id="row-count">0 行</span></div><div class="button-pair"><button class="secondary" id="pause">暂停</button><button class="text-button" id="cancel">取消处理</button></div></section>
 <section id="result" hidden><div class="card result-top"><p class="eyebrow">READY TO PLAY</p><h2>你的乐谱，拼好了。</h2><p id="result-meta"></p><div class="button-pair"><button class="primary" id="save">保存图片 ↓</button><button class="secondary" id="share">分享 / 存到相册</button></div></div><div class="warning" id="warnings" hidden></div><div class="result-tabs"><div><button id="preview-tab" class="selected">完整乐谱</button><button id="rows-tab">检查谱行</button></div><button class="text-button" id="again">重新生成</button></div><div id="images"></div><div id="rows-view" hidden><p class="hint">取消误识别的行，或调整顺序后，重新导出。</p><div id="rows"></div><div class="save-bar"><span id="selection-count"></span><button class="primary" id="rebuild">重新导出</button></div></div><p class="hint center">iPhone 上也可以点开原图，再长按保存。离开页面前请保存结果。</p></section>
 <section class="tips"><h3>第一次使用</h3><p>适合白底清晰的鼓谱与旋律五线谱，纵向滚动或逐页切换。有演奏者画面时，请只框选谱面。简谱、六线谱、横向滚动暂不支持；钢琴双谱表需人工核对。</p><p>选帧会尽量避开播放光标。导出前请检查谱行，尤其是换页处。</p></section>
-<footer><span>动态乐谱拼接工具 · Browser edition</span><span>把时间留给练习。</span></footer></main></body></html>
+<details class="card feedback-card" id="feedback">
+  <summary>意见反馈</summary>
+  <form id="feedback-form">
+    <label for="feedback-message">你希望我们改进什么？</label>
+    <textarea id="feedback-message" name="message" rows="4" maxlength="2000" required aria-describedby="feedback-note" placeholder="可以描述遇到的问题，或提出一个建议。"></textarea>
+    <p class="hint" id="feedback-note">最多 2000 字。请勿填写密码、验证码或身份证号。</p>
+    <button class="primary" type="submit">发送反馈</button>
+    <p class="feedback-status" id="feedback-status" role="status" aria-live="polite" hidden></p>
+  </form>
+</details>
+<footer><span>动态乐谱拼接工具 · Browser edition</span><span>把时间留给练习。</span></footer></main><script type="module" src="./feedback-form.js?v=1.0.0"></script></body></html>

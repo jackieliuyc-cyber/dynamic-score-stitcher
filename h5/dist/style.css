@@ -6,3 +6,23 @@
 .file-alternative{margin-top:10px;padding:14px 10px;background:white;border-style:solid}.file-alternative strong{font-size:13px}.file-alternative span{line-height:1.7}#import-status{overflow-wrap:anywhere}.file-picker:has(input:disabled){opacity:.5;cursor:wait}
 
 #import-panel .video-wrap video{max-height:240px;object-fit:contain}#import-panel .video-wrap{margin-bottom:12px}#import-panel canvas{pointer-events:none}
+
+.feedback-card {border:1px solid var(--line);padding:16px 22px}
+.feedback-card summary {color:var(--green);font-size:14px;font-weight:650}
+.feedback-card form {margin-top:14px}
+.feedback-card textarea {
+  display:block;
+  width:100%;
+  min-height:96px;
+  resize:vertical;
+  border:1px solid #dce4d5;
+  border-radius:9px;
+  background:#fbfcf8;
+  padding:11px;
+  color:var(--ink);
+  font:inherit;
+  font-size:16px;
+}
+.feedback-card textarea:focus-visible {outline:3px solid #adc77a;outline-offset:3px}
+.feedback-status {margin:10px 0 0;color:var(--green);font-size:13px}
+.feedback-status.feedback-error {color:#9b332c}

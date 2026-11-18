@@ -12,5 +12,15 @@ __pycache__/
 *.mov
 *.mkv
 
+# Private feedback data and SMTP credentials
+*.sqlite3
+*.sqlite3-*
+*.sqlite
+*.sqlite-*
+mail.json
+mail-*.json
+smtp.json
+smtp-*.json
+
 # Self-created H5 demonstration score
 !h5/dist/demo.mp4

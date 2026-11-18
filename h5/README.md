@@ -23,9 +23,45 @@
 - Mac 浏览器：`http://127.0.0.1:8780/`。
 - 手机：与 Mac 连接同一个 Wi-Fi，使用终端显示的局域网地址。不要在手机上输入 `127.0.0.1`。
 - Mac 需保持开机且预览服务运行。若无法连接，检查两台设备是否在同一网络，以及防火墙是否允许 Python 的入站连接。
-- 按 Ctrl+C 停止预览。服务只提供 `dist/` 内的静态文件。
+- 按 Ctrl+C 停止预览。服务提供 `dist/` 内的静态文件，传入 `--feedback-db` 时也接收反馈。
 
-此预览启动器需要 Mac 已有的 Python 3；正式部署只需把 `dist/` 上传到支持 HTTPS 的静态托管，不需要 Python 后端。直接双击 HTML 的 `file://` 模式不支持模块和 Worker。
+此预览启动器需要 Mac 已有的 Python 3。乐谱拼接可以部署在支持 HTTPS 的静态托管上，意见反馈需要同源的 `POST /api/feedback` 接口。直接双击 HTML 的 `file://` 模式不支持模块和 Worker。
+
+## 意见反馈
+
+页面底部的「意见反馈」接收最多 2000 字的文字。ECS 上的 Nginx 将 `/api/feedback` 转发给只监听 `127.0.0.1:8781` 的 `dynamic-score-feedback` 服务。反馈保存在站点目录之外，站长通过 SSH 登录 ECS 后可以查看：
+
+```sh
+sudo python3 /srv/dynamic-score-h5/feedback.py --database /var/lib/dynamic-score-feedback/feedback.sqlite3 --list
+```
+
+在本机开发时可以运行 `python3 serve.py --host 127.0.0.1 --feedback-db /tmp/dynamic-score-feedback-test.sqlite3`，用独立数据库测试反馈。
+
+### 反馈邮件通知
+
+后端启动参数 `--mail-config /安全路径/mail.json` 可启用 SMTP 通知。配置文件包含
+`host`、`port`、`security`（`ssl` 或 `starttls`）、`username`、`password`、`sender`、`recipient`。
+配置文件应仅允许服务账号读取，放在站点目录和 Git 仓库之外。Gmail 使用应用专用密码。
+
+例如，在服务器上用下列命令启动带邮件通知的服务（需先创建数据库所在目录并授予服务账号写权限）：
+
+```sh
+python3 feedback.py \
+  --database /var/lib/dynamic-score-feedback/feedback.sqlite3 \
+  --mail-config /var/lib/dynamic-score-feedback/mail.json
+```
+
+`feedback.py` 和 `feedback_mail.py` 应部署在同一目录。将同源 `/api/feedback` 请求代理到
+`http://127.0.0.1:8781`。用本机 `serve.py --feedback-db` 验收时，反馈会写入本机指定的数据库；
+验收 ECS 邮件通知时，应通过私有端口转发访问 ECS 站点并提交反馈。
+
+启用后，新反馈与邮件待发送记录在同一数据库事务中保存，后台发送邮件。发送失败后自动重试，
+间隔从 30 秒逐步增加到最多 1 小时，服务重启后继续处理待发送记录。历史反馈不会自动补发。
+SMTP 接受邮件后记录发送时间，最终是否进入收件箱仍取决于收件服务。若发信成功后进程在记录
+发送状态前退出，重试可能产生重复邮件，可按反馈编号识别。
+
+本地回归测试运行 `python3 -m unittest discover -s h5/tests -p test_feedback_mail.py -v`
+（从仓库根目录执行）。测试中的 SMTP 使用模拟对象，真实投递需要配置凭据后单独验收。
 
 ## 能力与限制
 

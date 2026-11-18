@@ -1,16 +1,18 @@
-"""Read-only static H5 preview with byte ranges for mobile video playback."""
+"""H5 preview with byte ranges for video and optional feedback storage."""
 import argparse
 import mimetypes
 import re
 import socket
 import subprocess
 import urllib.parse
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import ThreadingHTTPServer
 from pathlib import Path
+
+from feedback import FeedbackHandler
 
 ROOT = Path(__file__).resolve().parent / 'dist'
 
-class Handler(BaseHTTPRequestHandler):
+class Handler(FeedbackHandler):
     def do_HEAD(self):
         self.serve(False)
 
@@ -72,9 +74,12 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8780)
+    parser.add_argument('--host', default='0.0.0.0')
+    parser.add_argument('--feedback-db', type=Path)
     args = parser.parse_args()
     try:
-        server = ThreadingHTTPServer(('0.0.0.0', args.port), Handler)
+        server = ThreadingHTTPServer((args.host, args.port), Handler)
+        server.feedback_database = args.feedback_db
     except OSError as exc:
         raise SystemExit('端口无法使用，请换一个端口：python3 serve.py --port 8781\n' + str(exc))
     print('H5 本机地址：http://127.0.0.1:%d/' % args.port, flush=True)
