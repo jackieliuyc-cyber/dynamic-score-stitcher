@@ -24,5 +24,15 @@
   font-size:16px;
 }
 .feedback-card textarea:focus-visible {outline:3px solid #adc77a;outline-offset:3px}
-.feedback-status {margin:10px 0 0;color:var(--green);font-size:13px}
-.feedback-status.feedback-error {color:#9b332c}
+.feedback-status {
+  min-height:34px;
+  margin:8px 0;
+  padding:7px 10px;
+  border-radius:8px;
+  color:var(--green);
+  font-size:13px;
+  line-height:20px;
+}
+.feedback-status[data-state="success"] {background:#e7f2e9;color:#195630;font-weight:650}
+.feedback-status[data-state="error"] {background:#faeeea;color:#9b332c}
+.feedback-card button[aria-disabled="true"] {opacity:.65;cursor:wait}
