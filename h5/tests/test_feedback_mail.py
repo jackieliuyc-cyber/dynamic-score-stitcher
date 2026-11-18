@@ -33,9 +33,19 @@ class MailTests(unittest.TestCase):
             connection.execute('CREATE TABLE feedback (id INTEGER PRIMARY KEY, submitted_at TEXT, message TEXT)')
             connection.execute("INSERT INTO feedback VALUES (1, '2026-11-18', 'Historical feedback')")
         prepare_database(self.database, notify=True)
-        store_feedback(self.database, 'New feedback', notify=True, source_region='浙江省 / 杭州市')
+        store_feedback(self.database, 'New feedback', notify=True, source_region='浙江省杭州市')
         self.assertEqual(self.query('SELECT feedback_id FROM feedback_mail'), [(2,)])
-        self.assertEqual(self.query('SELECT source_region FROM feedback ORDER BY id'), [(None,), ('浙江省 / 杭州市',)])
+        self.assertEqual(self.query('SELECT source_region FROM feedback ORDER BY id'), [(None,), ('浙江省杭州市',)])
+
+    def test_existing_chinese_regions_are_migrated(self):
+        for region in ('Zhejiang / Hangzhou', '上海市 / 上海市', 'California / Mountain View', None):
+            store_feedback(self.database, 'Historical feedback', source_region=region)
+        prepare_database(self.database, notify=True)
+        prepare_database(self.database, notify=True)
+        self.assertEqual(self.query('SELECT source_region FROM feedback ORDER BY id'), [
+            ('浙江省杭州市',), ('上海市',), ('California / Mountain View',), (None,),
+        ])
+        self.assertEqual(self.query('SELECT feedback_id FROM feedback_mail'), [])
 
     def test_submit_then_retry_without_losing_feedback(self):
         server = FeedbackServer(('127.0.0.1', 0), FeedbackHandler)
@@ -82,13 +92,13 @@ class MailTests(unittest.TestCase):
         config = dict(host='smtp.example.com', port=465, security='ssl', username='test',
                       password='test', sender='sender@example.com', recipient='owner@example.com')
         with patch('feedback_mail.smtplib.SMTP_SSL') as smtp:
-            send_notification(config, (3, '2026-11-18T02:00:00+00:00', '中文反馈', '浙江省 / 杭州市'))
+            send_notification(config, (3, '2026-11-18T02:00:00+00:00', '中文反馈', '浙江省杭州市'))
             smtp.assert_called_once()
             client = smtp.return_value
             mail = client.send_message.call_args[0][0]
             self.assertEqual(mail['To'], 'owner@example.com')
             self.assertIn('中文反馈', mail.get_content())
-            self.assertIn('来源地区（IP 推测）：浙江省 / 杭州市', mail.get_content())
+            self.assertIn('来源地区（IP 推测）：浙江省杭州市', mail.get_content())
             client.close.assert_called_once()
 
     def test_look_up_only_public_ipv4_and_ipv6(self):
@@ -105,6 +115,33 @@ class MailTests(unittest.TestCase):
         self.assertEqual(lookup_region(reader, '::ffff:8.8.8.8'), '浙江省 / Hangzhou')
         self.assertEqual(reader.address, '8.8.8.8')
         self.assertEqual(lookup_region(reader, '2001:4860:4860::8888'), '浙江省 / Hangzhou')
+
+    def test_chinese_names_use_administrative_divisions(self):
+        cases = [
+            ('CN', 'Zhejiang', 'Hangzhou', '浙江省杭州市'),
+            ('CN', '浙江', '杭州市', '浙江省杭州市'),
+            ('CN', 'Shanghai', 'Shanghai', '上海市'),
+            ('CN', 'Shaanxi', 'Xi’an City', '陕西省西安市'),
+            ('CN', 'Shanxi', 'Taiyuan', '山西省太原市'),
+            ('CN', 'Xinjiang', 'Ürümqi', '新疆维吾尔自治区乌鲁木齐市'),
+            ('CN', 'Guangxi', 'Nanning', '广西壮族自治区南宁市'),
+            ('CN', 'Anhui', 'Chaohu', '安徽省'),
+            ('CN', 'Jiangsu', 'Taizhou', '江苏省泰州市'),
+            ('CN', 'Zhejiang', 'Taizhou', '浙江省台州市'),
+            ('CN', None, 'Taizhou', None),
+            ('CN', None, 'Hangzhou', '浙江省杭州市'),
+            ('HK', None, 'Hong Kong', '香港特别行政区'),
+            ('TW', 'Taipei', 'Taipei City', '台湾省台北市'),
+            ('US', 'California', 'Mountain View', 'California / Mountain View'),
+        ]
+        for country, province, city, expected in cases:
+            with self.subTest(country=country, province=province, city=city):
+                reader = type('Reader', (), {'get': lambda self, ip: {
+                    'country': {'iso_code': country},
+                    'subdivisions': [{'names': {'en': province}}],
+                    'city': {'names': {'en': city}},
+                }})()
+                self.assertEqual(lookup_region(reader, '8.8.8.8'), expected)
 
 
 if __name__ == '__main__':

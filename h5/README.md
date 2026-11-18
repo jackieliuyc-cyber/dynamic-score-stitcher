@@ -45,6 +45,11 @@ sudo python3 feedback.py --database /var/lib/dynamic-score-feedback/feedback.sql
 若使用 CDN，需要先配置 Nginx 只信任 CDN 的代理地址。反馈库只保存省市（`source_region`），邮件中以
 「来源地区（IP 推测）」显示。本机转发、内网请求和查不到归属地的请求显示「未知」。历史反馈保留原内容。
 
+中国省市按 `china_regions.json` 显示为中文，例如「浙江省杭州市」或「北京市」。只能确认省级地区时显示省名。
+反馈服务启动时会把可识别的既有中国地区转换成相同格式。对照表的内地行政区划来自
+[Administrative-divisions-of-China](https://github.com/modood/Administrative-divisions-of-China/tree/c49d495b40ac73eb1a66f6eeae5f8fd10696f035)，
+拼音别名用 [pypinyin](https://pypi.org/project/pypinyin/0.55.0/) 生成，并补充了常见异名。
+
 ### 反馈邮件通知
 
 后端启动参数 `--mail-config /安全路径/mail.json` 可启用 SMTP 通知。配置文件包含
@@ -59,7 +64,7 @@ python3 feedback.py \
   --mail-config /var/lib/dynamic-score-feedback/mail.json
 ```
 
-`feedback.py`、`feedback_mail.py` 和 `feedback_region.py` 应部署在同一目录。将同源 `/api/feedback` 请求代理到
+`feedback.py`、`feedback_mail.py`、`feedback_region.py` 和 `china_regions.json` 应部署在同一目录。将同源 `/api/feedback` 请求代理到
 `http://127.0.0.1:8781`。用本机 `serve.py --feedback-db` 验收时，反馈会写入本机指定的数据库；
 验收 ECS 邮件通知时，应通过私有端口转发访问 ECS 站点并提交反馈。
 

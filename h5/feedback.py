@@ -12,7 +12,7 @@ from pathlib import Path
 from socketserver import ThreadingMixIn
 
 from feedback_mail import initialize_outbox, load_config, run_mail_worker
-from feedback_region import lookup_region
+from feedback_region import localize_saved_region, lookup_region
 
 
 MAX_MESSAGE = 2000
@@ -34,6 +34,11 @@ def prepare_database(database, notify=False):
             columns = {column[1] for column in connection.execute('PRAGMA table_info(feedback)')}
             if 'source_region' not in columns:
                 connection.execute('ALTER TABLE feedback ADD COLUMN source_region TEXT')
+            for feedback_id, region in connection.execute(
+                    'SELECT id, source_region FROM feedback WHERE source_region IS NOT NULL').fetchall():
+                localized = localize_saved_region(region)
+                if localized != region:
+                    connection.execute('UPDATE feedback SET source_region=? WHERE id=?', (localized, feedback_id))
             if notify:
                 initialize_outbox(connection)
 
