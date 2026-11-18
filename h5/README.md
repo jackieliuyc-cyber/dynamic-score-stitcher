@@ -32,10 +32,18 @@
 页面底部的「意见反馈」接收最多 2000 字的文字。ECS 上的 Nginx 将 `/api/feedback` 转发给只监听 `127.0.0.1:8781` 的 `dynamic-score-feedback` 服务。反馈保存在站点目录之外，站长通过 SSH 登录 ECS 后可以查看：
 
 ```sh
-sudo python3 /srv/dynamic-score-h5/feedback.py --database /var/lib/dynamic-score-feedback/feedback.sqlite3 --list
+sudo python3 feedback.py --database /var/lib/dynamic-score-feedback/feedback.sqlite3 --list
 ```
 
 在本机开发时可以运行 `python3 serve.py --host 127.0.0.1 --feedback-db /tmp/dynamic-score-feedback-test.sqlite3`，用独立数据库测试反馈。
+
+在反馈服务中传入 `--geoip-db /服务器数据目录/city.mmdb` 可启用来源地区推测。服务使用 `maxminddb`
+读取 [DB-IP City Lite](https://db-ip.com/db/download/ip-to-city-lite) 的 MMDB 文件。杭州 ECS 的 Python 3.6 使用
+`maxminddb==2.2.0`。数据库应放在网站静态目录外，可替换为新版文件后重启反馈服务。
+
+在 Nginx 的反馈接口配置中设置 `proxy_set_header X-Real-IP $remote_addr;`，由 Nginx 用连接地址覆盖客户端请求头。
+若使用 CDN，需要先配置 Nginx 只信任 CDN 的代理地址。反馈库只保存省市（`source_region`），邮件中以
+「来源地区（IP 推测）」显示。本机转发、内网请求和查不到归属地的请求显示「未知」。历史反馈保留原内容。
 
 ### 反馈邮件通知
 
@@ -51,7 +59,7 @@ python3 feedback.py \
   --mail-config /var/lib/dynamic-score-feedback/mail.json
 ```
 
-`feedback.py` 和 `feedback_mail.py` 应部署在同一目录。将同源 `/api/feedback` 请求代理到
+`feedback.py`、`feedback_mail.py` 和 `feedback_region.py` 应部署在同一目录。将同源 `/api/feedback` 请求代理到
 `http://127.0.0.1:8781`。用本机 `serve.py --feedback-db` 验收时，反馈会写入本机指定的数据库；
 验收 ECS 邮件通知时，应通过私有端口转发访问 ECS 站点并提交反馈。
 

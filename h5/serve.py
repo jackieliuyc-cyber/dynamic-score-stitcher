@@ -8,7 +8,7 @@ import urllib.parse
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from feedback import FeedbackHandler
+from feedback import FeedbackHandler, prepare_database
 
 ROOT = Path(__file__).resolve().parent / 'dist'
 
@@ -77,6 +77,8 @@ if __name__ == '__main__':
     parser.add_argument('--host', default='0.0.0.0')
     parser.add_argument('--feedback-db', type=Path)
     args = parser.parse_args()
+    if args.feedback_db is not None:
+        prepare_database(args.feedback_db)
     try:
         server = ThreadingHTTPServer((args.host, args.port), Handler)
         server.feedback_database = args.feedback_db

@@ -18,8 +18,9 @@
   <summary>意见反馈</summary>
   <form id="feedback-form">
     <label for="feedback-message">你希望我们改进什么？</label>
-    <textarea id="feedback-message" name="message" rows="4" maxlength="2000" required aria-describedby="feedback-note" placeholder="可以描述遇到的问题，或提出一个建议。"></textarea>
+    <textarea id="feedback-message" name="message" rows="4" maxlength="2000" required aria-describedby="feedback-note feedback-region-note" placeholder="可以描述遇到的问题，或提出一个建议。"></textarea>
     <p class="hint" id="feedback-note">最多 2000 字。请勿填写密码、验证码或身份证号。</p>
+    <p class="hint" id="feedback-region-note">提交反馈时，服务器会根据来源 IP 推测省市，用于分析反馈。系统只在反馈记录和通知邮件中保留推测的省市，无需开启设备定位。地区数据由 <a href="https://db-ip.com/" rel="noreferrer">DB-IP</a> 提供。</p>
     <button class="primary" type="submit">发送反馈</button>
     <p class="feedback-status" id="feedback-status" role="status" aria-live="polite" hidden></p>
   </form>

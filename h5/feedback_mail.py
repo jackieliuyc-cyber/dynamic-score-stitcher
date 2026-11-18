@@ -39,7 +39,7 @@ def load_config(path):
 
 
 def send_notification(config, feedback):
-    feedback_id, submitted_at, text = feedback
+    feedback_id, submitted_at, text, source_region = feedback
     mail = EmailMessage()
     mail['From'] = config['sender']
     mail['To'] = config['recipient']
@@ -50,8 +50,8 @@ def send_notification(config, feedback):
         feedback_id, submitted_at.replace(':', '').replace('+', ''),
         config['sender'].rsplit('@', 1)[1],
     )
-    mail.set_content('收到一条网站反馈。\n\n编号：{}\n提交时间（UTC）：{}\n\n{}\n'.format(
-        feedback_id, submitted_at, text))
+    mail.set_content('收到一条网站反馈。\n\n编号：{}\n提交时间（UTC）：{}\n来源地区（IP 推测）：{}\n\n{}\n'.format(
+        feedback_id, submitted_at, source_region or '未知', text))
     context = ssl.create_default_context()
     if config['security'] == 'ssl':
         client = smtplib.SMTP_SSL(config['host'], config['port'], timeout=20, context=context)
@@ -72,7 +72,7 @@ def deliver_next(database, config):
         with connection:
             connection.execute('BEGIN IMMEDIATE')
             row = connection.execute(
-                'SELECT f.id, f.submitted_at, f.message, m.attempts '
+                'SELECT f.id, f.submitted_at, f.message, f.source_region, m.attempts '
                 'FROM feedback_mail m JOIN feedback f ON f.id = m.feedback_id '
                 'WHERE m.sent_at IS NULL AND m.next_attempt <= ? '
                 'ORDER BY m.feedback_id LIMIT 1', (now,),
@@ -84,11 +84,11 @@ def deliver_next(database, config):
                 (now + 300, row[0]),
             )
         try:
-            send_notification(config, row[:3])
+            send_notification(config, row[:4])
         except (OSError, smtplib.SMTPException, ValueError) as error:
             # SMTP responses may contain personal data. Store only the error class.
             error_name = type(error).__name__
-            delay = min(3600, 30 * 2 ** min(row[3], 7))
+            delay = min(3600, 30 * 2 ** min(row[4], 7))
             with connection:
                 connection.execute(
                     'UPDATE feedback_mail SET next_attempt=?, last_error=? WHERE feedback_id=?',
